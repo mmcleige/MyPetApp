@@ -3,3 +3,4 @@
 宠物健康监测app
 Android Studio LadyBug
 远端同步成功
+双向同步成功
