@@ -6,17 +6,23 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
-// @Dao 告诉系统：这是专门用来操作 "pets" 表的工具箱
 @Dao
 interface PetDao {
 
-    // 1. 增：把新宠物存进数据库 (如果遇到冲突，就替换掉旧的)
+    // --- 宠物基础档案任务 ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPet(pet: PetEntity)
 
-    // 2. 查：获取所有的宠物档案，并按 id 倒序排列 (最新添加的排在最前面)
-    // Flow 是一个非常强大的数据流：一旦数据库有更新，它会自动通知界面刷新！
     @Query("SELECT * FROM pets ORDER BY id DESC")
     fun getAllPets(): Flow<List<PetEntity>>
 
+    // 👇 --- 新增：体重记录任务 --- 👇
+
+    // 任务1：把新称的体重存进数据库
+    @Insert
+    suspend fun insertWeightRecord(record: WeightRecordEntity)
+
+    // 任务2：把所有的体重记录按时间先后顺序 (ASC) 拿出来，用来画折线图！
+    @Query("SELECT * FROM weight_records ORDER BY timestamp ASC")
+    fun getAllWeightRecords(): Flow<List<WeightRecordEntity>>
 }
