@@ -21,6 +21,44 @@
             android:textStyle="bold"
             android:layout_marginBottom="32dp" />
 
+        <!-- 点击上传宠物头像 -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp">
+
+            <!-- 🌟 重点在这里：这是一个圆形的“饼干模具” -->
+            <!-- 宽高 100dp，圆角设为 50dp (正好是一半)，它就变成了一个完美的圆！ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_gravity="center"
+                app:cardCornerRadius="50dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <!-- 里面的 ImageView 就算背景是方的，也会被外面的模具强行切成圆的 -->
+                <ImageView
+                    android:id="@+id/iv_add_avatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#E0E0E0"
+                    android:scaleType="centerCrop" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 提示文字 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="60dp"
+                android:text="点击上传照片"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                android:background="#B3FFFFFF"
+                android:paddingHorizontal="8dp"/>
+        </FrameLayout>
+
         <!-- 1. 宠物名字输入框 -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"

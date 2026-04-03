@@ -69,4 +69,8 @@ dependencies {
 
     // 5. 图表库 (画体重折线图)
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // 6. 图片加载神器 Coil (负责把高清大图压缩并切成圆角)
+    implementation("io.coil-kt:coil:2.6.0")
+
 }

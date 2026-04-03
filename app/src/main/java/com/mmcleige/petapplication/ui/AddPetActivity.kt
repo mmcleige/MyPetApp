@@ -1,22 +1,39 @@
 package com.mmcleige.petapplication.ui
 
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import coil.load
+import coil.transform.CircleCropTransformation
 import com.mmcleige.petapplication.data.local.AppDatabase
 import com.mmcleige.petapplication.data.local.PetEntity
 import com.mmcleige.petapplication.databinding.ActivityAddPetBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class AddPetActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddPetBinding
+    private var selectedImageUri: Uri? = null
+
+    private val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            selectedImageUri = uri
+            binding.ivAddAvatar.load(uri) {
+                crossfade(true)
+                transformations(CircleCropTransformation())
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,50 +47,74 @@ class AddPetActivity : AppCompatActivity() {
             insets
         }
 
-        // 监听保存按钮点击
+        binding.ivAddAvatar.setOnClickListener {
+            pickMedia.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+
         binding.btnSavePet.setOnClickListener {
             savePetData()
         }
     }
 
+    // 🌟 核心绝招：搬运工！把系统相册的临时文件，复制到 APP 自己的私有大宅子里
+    private fun copyUriToInternalStorage(uri: Uri): String? {
+        return try {
+            // 打开系统相册的那张图
+            val inputStream = contentResolver.openInputStream(uri) ?: return null
+            // 给我们自己的图片起个唯一的名字（按时间戳）
+            val fileName = "pet_avatar_${System.currentTimeMillis()}.jpg"
+            // 在 APP 的私有地盘 (filesDir) 建一个空文件
+            val file = File(filesDir, fileName)
+            val outputStream = FileOutputStream(file)
+
+            // 开始复制！
+            inputStream.copyTo(outputStream)
+
+            inputStream.close()
+            outputStream.close()
+
+            // 复制成功，返回这张图片在我们自己地盘里的绝对路径！
+            file.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     private fun savePetData() {
-        // 1. 把输入框里的字抓出来，去掉前后的空格
         val name = binding.etPetName.text.toString().trim()
         val breed = binding.etPetBreed.text.toString().trim()
         val ageStr = binding.etPetAge.text.toString().trim()
         val weightStr = binding.etPetWeight.text.toString().trim()
 
-        // 2. 拦截检查：名字必须填！
         if (name.isEmpty()) {
             Toast.makeText(this, "主子的名字不能为空哦！", Toast.LENGTH_SHORT).show()
-            return // 名字没填就直接退出这个函数，不往下走了
+            return
         }
 
-        // 3. 把年龄和体重转换成小数 (Double)，如果用户没填或者乱填，就默认当成 0.0
         val age = ageStr.toDoubleOrNull() ?: 0.0
         val weight = weightStr.toDoubleOrNull() ?: 0.0
 
-        // 4. 打包数据：把刚才抓取到的数据，塞进我们建好的 PetEntity 实体类里
-        val newPet = PetEntity(
-            name = name,
-            breed = if (breed.isEmpty()) "未知品种" else breed, // 没填品种就写未知
-            age = age,
-            weight = weight
-        )
-
-        // 5. 召唤后台打工人 (协程) 去存数据库！
-        // lifecycleScope.launch 表示启动一个协程，Dispatchers.IO 表示让他去后台干活
+        // 让后台协程去干活，因为“复制文件”和“存数据库”都不能卡主界面
         lifecycleScope.launch(Dispatchers.IO) {
 
-            // 获取数据库单例管家
+            // 1. 先偷偷把照片复制回老家，拿到绝对路径 (本地永久地址)
+            val permanentImagePath = selectedImageUri?.let { copyUriToInternalStorage(it) }
+
+            // 2. 把这个永久地址存进 Excel 表格
+            val newPet = PetEntity(
+                name = name,
+                breed = if (breed.isEmpty()) "未知品种" else breed,
+                age = age,
+                weight = weight,
+                avatarUri = permanentImagePath // 存进去的是永久路径！
+            )
+
             val db = AppDatabase.getDatabase(applicationContext)
-            // 调用 DAO 里的 insertPet 方法，把打包好的 newPet 塞进数据库
             db.petDao().insertPet(newPet)
 
-            // 6. 存完之后，回到主线程 (Dispatchers.Main) 刷新界面
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@AddPetActivity, "保存成功！", Toast.LENGTH_SHORT).show()
-                // finish() 会关掉当前的“添加页面”，自动退回到之前的“首页”
                 finish()
             }
         }
