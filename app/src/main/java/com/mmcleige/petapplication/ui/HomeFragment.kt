@@ -51,7 +51,10 @@ class HomeFragment : Fragment() {
                         val latestPet = petList[0]
 
                         binding.tvPetName.text = latestPet.name
-                        binding.tvPetDetails.text = "${latestPet.breed}  |  ${latestPet.age}岁  |  ${latestPet.weight} kg"
+                        // 🌟 调用我们写好的 TimeUtils，把时间戳变成 "2个月" 或 "3岁" 的智能文本
+                        val intelligentAge = com.mmcleige.petapplication.utils.TimeUtils.calculateAge(latestPet.birthDate)
+                        binding.tvPetDetails.text = "${latestPet.breed}  |  $intelligentAge  |  ${latestPet.weight} kg"
+
 
                         // 🌟 重点修改：直接把数据库里的地址变成一个真实的 File 文件扔给 Coil
                         if (latestPet.avatarUri != null) {

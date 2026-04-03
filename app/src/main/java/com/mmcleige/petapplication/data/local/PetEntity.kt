@@ -9,8 +9,8 @@ data class PetEntity(
     val id: Int = 0,
     val name: String,
     val breed: String,
-    val age: Double,
+    // 👇 重点修改：删掉 age，换成 birthDate (保存出生那天的时间戳)
+    val birthDate: Long,
     val weight: Double,
-    // 👇 新增这一列：保存照片在手机里的系统地址。加了 ? 表示允许为空（不强制必须上传照片）
     val avatarUri: String? = null
 )

@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 // 👇 版本号改成 2
-@Database(entities = [PetEntity::class, WeightRecordEntity::class], version = 4, exportSchema = false)
+@Database(entities = [PetEntity::class, WeightRecordEntity::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun petDao(): PetDao
 

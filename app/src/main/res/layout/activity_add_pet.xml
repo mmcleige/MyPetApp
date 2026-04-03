@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"> <!-- 白色背景，干净清爽 -->
+    android:background="#FFFFFF">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,8 +11,8 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- 页面大标题 -->
         <TextView
+            android:id="@+id/tv_form_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="添加新宠物"
@@ -21,14 +21,11 @@
             android:textStyle="bold"
             android:layout_marginBottom="32dp" />
 
-        <!-- 点击上传宠物头像 -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp">
 
-            <!-- 🌟 重点在这里：这是一个圆形的“饼干模具” -->
-            <!-- 宽高 100dp，圆角设为 50dp (正好是一半)，它就变成了一个完美的圆！ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="100dp"
                 android:layout_height="100dp"
@@ -37,16 +34,15 @@
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
-                <!-- 里面的 ImageView 就算背景是方的，也会被外面的模具强行切成圆的 -->
                 <ImageView
                     android:id="@+id/iv_add_avatar"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="#E0E0E0"
-                    android:scaleType="centerCrop" />
+                    android:scaleType="centerCrop"
+                    android:contentDescription="宠物头像上传区域" />
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 提示文字 -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -59,14 +55,12 @@
                 android:paddingHorizontal="8dp"/>
         </FrameLayout>
 
-        <!-- 1. 宠物名字输入框 -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:hint="宠物名字 (如：旺财)">
-
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_pet_name"
                 android:layout_width="match_parent"
@@ -74,14 +68,12 @@
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 2. 宠物品种输入框 -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:hint="品种 (如：金毛犬 / 英短猫)">
-
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_pet_breed"
                 android:layout_width="match_parent"
@@ -89,29 +81,28 @@
                 android:inputType="text" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 3. 年龄输入框 -->
+        <!-- 🌟 修改点：出生日期选择框 (禁止软键盘弹出) -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:hint="年龄 (岁)">
-
+            android:hint="出生日期 (点击选择)">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_pet_age"
+                android:id="@+id/et_pet_birth_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal" />
+                android:focusable="false"
+                android:cursorVisible="false"
+                android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 4. 体重输入框 -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
             android:hint="体重 (kg)">
-
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_pet_weight"
                 android:layout_width="match_parent"
@@ -119,13 +110,26 @@
                 android:inputType="numberDecimal" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- 保存按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_save_pet"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="保存宠物档案"
             android:textSize="18sp"
+            app:cornerRadius="12dp" />
+
+        <!-- 🌟 新增：危险操作的重置按钮 (默认隐藏) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_reset_data"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:text="重置清空所有数据"
+            android:textColor="#F44336"
+            app:backgroundTint="#1AF44336"
+            android:visibility="gone"
+            app:strokeColor="#F44336"
+            app:strokeWidth="1dp"
             app:cornerRadius="12dp" />
 
     </LinearLayout>

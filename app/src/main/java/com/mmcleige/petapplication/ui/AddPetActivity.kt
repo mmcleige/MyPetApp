@@ -2,6 +2,7 @@ package com.mmcleige.petapplication.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,20 +12,31 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import coil.transform.CircleCropTransformation
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.mmcleige.petapplication.data.local.AppDatabase
 import com.mmcleige.petapplication.data.local.PetEntity
 import com.mmcleige.petapplication.data.local.WeightRecordEntity
 import com.mmcleige.petapplication.databinding.ActivityAddPetBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class AddPetActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddPetBinding
     private var selectedImageUri: Uri? = null
+
+    // 记录选中的出生时间戳（默认就是今天）
+    private var selectedBirthDateTimestamp: Long = System.currentTimeMillis()
+    // 记录当前是否是“编辑模式”（如果是编辑，这里存的就是宠物的 ID）
+    private var existingPetId: Int? = null
+    private var existingAvatarUri: String? = null
 
     private val pickMedia = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
@@ -52,29 +64,71 @@ class AddPetActivity : AppCompatActivity() {
             pickMedia.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
 
-        binding.btnSavePet.setOnClickListener {
-            savePetData()
+        // 🌟 酷炫功能：点击出生日期框，弹出高颜值的 Material 日历！
+        binding.etPetBirthDate.setOnClickListener {
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("选择主子的生日")
+                .setSelection(selectedBirthDateTimestamp)
+                .build()
+
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                selectedBirthDateTimestamp = selection
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                binding.etPetBirthDate.setText(sdf.format(Date(selection)))
+            }
+            datePicker.show(supportFragmentManager, "BIRTH_DATE_PICKER")
+        }
+
+        binding.btnSavePet.setOnClickListener { savePetData() }
+
+        binding.btnResetData.setOnClickListener { resetAllData() }
+
+        // 🌟 进页面先查户口：如果是已经存在的宠物，就进入“编辑模式”
+        checkExistingPet()
+    }
+
+    private fun checkExistingPet() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(applicationContext)
+            val pet = db.petDao().getLatestPetFlow().firstOrNull() // 只取最新的一条数据看一眼
+
+            withContext(Dispatchers.Main) {
+                if (pet != null) {
+                    // 进入编辑模式！把旧数据填回框里
+                    existingPetId = pet.id
+                    existingAvatarUri = pet.avatarUri
+                    binding.tvFormTitle.text = "修改资料"
+                    binding.btnSavePet.text = "保存修改"
+                    binding.btnResetData.visibility = View.VISIBLE // 显示危险的重置按钮
+
+                    binding.etPetName.setText(pet.name)
+                    binding.etPetBreed.setText(pet.breed)
+                    binding.etPetWeight.setText(pet.weight.toString())
+
+                    selectedBirthDateTimestamp = pet.birthDate
+                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    binding.etPetBirthDate.setText(sdf.format(Date(pet.birthDate)))
+
+                    if (pet.avatarUri != null) {
+                        binding.ivAddAvatar.load(File(pet.avatarUri)) {
+                            crossfade(true)
+                            transformations(CircleCropTransformation())
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // 🌟 核心绝招：搬运工！把系统相册的临时文件，复制到 APP 自己的私有大宅子里
     private fun copyUriToInternalStorage(uri: Uri): String? {
         return try {
-            // 打开系统相册的那张图
             val inputStream = contentResolver.openInputStream(uri) ?: return null
-            // 给我们自己的图片起个唯一的名字（按时间戳）
             val fileName = "pet_avatar_${System.currentTimeMillis()}.jpg"
-            // 在 APP 的私有地盘 (filesDir) 建一个空文件
             val file = File(filesDir, fileName)
             val outputStream = FileOutputStream(file)
-
-            // 开始复制！
             inputStream.copyTo(outputStream)
-
             inputStream.close()
             outputStream.close()
-
-            // 复制成功，返回这张图片在我们自己地盘里的绝对路径！
             file.absolutePath
         } catch (e: Exception) {
             e.printStackTrace()
@@ -85,43 +139,57 @@ class AddPetActivity : AppCompatActivity() {
     private fun savePetData() {
         val name = binding.etPetName.text.toString().trim()
         val breed = binding.etPetBreed.text.toString().trim()
-        val ageStr = binding.etPetAge.text.toString().trim()
         val weightStr = binding.etPetWeight.text.toString().trim()
 
         if (name.isEmpty()) {
             Toast.makeText(this, "主子的名字不能为空哦！", Toast.LENGTH_SHORT).show()
             return
         }
-
-        val age = ageStr.toDoubleOrNull() ?: 0.0
         val weight = weightStr.toDoubleOrNull() ?: 0.0
 
-        // 让后台协程去干活，因为“复制文件”和“存数据库”都不能卡主界面
         lifecycleScope.launch(Dispatchers.IO) {
-            val permanentImagePath = selectedImageUri?.let { copyUriToInternalStorage(it) }
+            // 如果用户重新选了照片，就复制新照片；否则沿用旧照片的地址
+            val finalAvatarUri = if (selectedImageUri != null) {
+                copyUriToInternalStorage(selectedImageUri!!)
+            } else {
+                existingAvatarUri
+            }
 
-            val newPet = PetEntity(
+            val petToSave = PetEntity(
+                id = existingPetId ?: 0, // 如果是编辑，带着旧ID去存，就会覆盖旧数据！
                 name = name,
                 breed = if (breed.isEmpty()) "未知品种" else breed,
-                age = age,
+                birthDate = selectedBirthDateTimestamp,
                 weight = weight,
-                avatarUri = permanentImagePath
+                avatarUri = finalAvatarUri
             )
 
             val db = AppDatabase.getDatabase(applicationContext)
+            val newPetId = db.petDao().insertPet(petToSave)
 
-            // 🌟 重点 1：拿到系统分配的专属 ID
-            val newPetId = db.petDao().insertPet(newPet)
-
-            // 🌟 重点 2：立刻把填写的“初始体重”作为第一条记录存入图表库！
-            val firstWeightRecord = WeightRecordEntity(petId = newPetId.toInt(), weight = weight)
-            db.petDao().insertWeightRecord(firstWeightRecord)
+            // 如果是全新添加的宠物（不是修改），就记录第一笔初始体重
+            if (existingPetId == null) {
+                db.petDao().insertWeightRecord(WeightRecordEntity(petId = newPetId.toInt(), weight = weight))
+            }
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@AddPetActivity, "保存成功！", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
+    }
 
+    // 🌟 一键重置清空数据的绝招
+    private fun resetAllData() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(applicationContext)
+            db.petDao().deleteAllWeightRecords()
+            db.petDao().deleteAllPets()
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@AddPetActivity, "数据已全部清空，您可以重新开始了！", Toast.LENGTH_LONG).show()
+                finish() // 杀回首页
+            }
+        }
     }
 }
