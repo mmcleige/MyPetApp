@@ -20,6 +20,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- 👇 🌟 新增：临时用来测试打工人的红色警报按钮 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_test_reminder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
+        android:text="测试 10秒后提醒"
+        app:backgroundTint="#F44336"
+        app:layout_constraintBottom_toBottomOf="@id/tv_home_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tv_home_title" />
+
     <!-- 宠物信息大卡片 -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_pet_info"
