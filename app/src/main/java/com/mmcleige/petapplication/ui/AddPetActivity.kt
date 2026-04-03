@@ -13,6 +13,7 @@ import coil.load
 import coil.transform.CircleCropTransformation
 import com.mmcleige.petapplication.data.local.AppDatabase
 import com.mmcleige.petapplication.data.local.PetEntity
+import com.mmcleige.petapplication.data.local.WeightRecordEntity
 import com.mmcleige.petapplication.databinding.ActivityAddPetBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -97,26 +98,30 @@ class AddPetActivity : AppCompatActivity() {
 
         // 让后台协程去干活，因为“复制文件”和“存数据库”都不能卡主界面
         lifecycleScope.launch(Dispatchers.IO) {
-
-            // 1. 先偷偷把照片复制回老家，拿到绝对路径 (本地永久地址)
             val permanentImagePath = selectedImageUri?.let { copyUriToInternalStorage(it) }
 
-            // 2. 把这个永久地址存进 Excel 表格
             val newPet = PetEntity(
                 name = name,
                 breed = if (breed.isEmpty()) "未知品种" else breed,
                 age = age,
                 weight = weight,
-                avatarUri = permanentImagePath // 存进去的是永久路径！
+                avatarUri = permanentImagePath
             )
 
             val db = AppDatabase.getDatabase(applicationContext)
-            db.petDao().insertPet(newPet)
+
+            // 🌟 重点 1：拿到系统分配的专属 ID
+            val newPetId = db.petDao().insertPet(newPet)
+
+            // 🌟 重点 2：立刻把填写的“初始体重”作为第一条记录存入图表库！
+            val firstWeightRecord = WeightRecordEntity(petId = newPetId.toInt(), weight = weight)
+            db.petDao().insertWeightRecord(firstWeightRecord)
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@AddPetActivity, "保存成功！", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
+
     }
 }

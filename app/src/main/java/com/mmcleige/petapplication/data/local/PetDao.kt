@@ -9,20 +9,25 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PetDao {
 
-    // --- 宠物基础档案任务 ---
+    // 🌟 技能1：存入新宠物时，返回系统给它分配的专属 ID 号！
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPet(pet: PetEntity)
+    suspend fun insertPet(pet: PetEntity): Long
+
+    // 🌟 技能2：直接获取最新添加的一只宠物（用 Flow 实时监听）
+    @Query("SELECT * FROM pets ORDER BY id DESC LIMIT 1")
+    fun getLatestPetFlow(): Flow<PetEntity?>
+
+    // 🌟 技能3：同步更新！修改指定宠物的最新体重
+    @Query("UPDATE pets SET weight = :newWeight WHERE id = :petId")
+    suspend fun updatePetWeight(petId: Int, newWeight: Double)
 
     @Query("SELECT * FROM pets ORDER BY id DESC")
     fun getAllPets(): Flow<List<PetEntity>>
 
-    // 👇 --- 新增：体重记录任务 --- 👇
-
-    // 任务1：把新称的体重存进数据库
     @Insert
     suspend fun insertWeightRecord(record: WeightRecordEntity)
 
-    // 任务2：把所有的体重记录按时间先后顺序 (ASC) 拿出来，用来画折线图！
-    @Query("SELECT * FROM weight_records ORDER BY timestamp ASC")
-    fun getAllWeightRecords(): Flow<List<WeightRecordEntity>>
+    // 🌟 技能4：定向查询！只查“某一只专属宠物”的历史体重
+    @Query("SELECT * FROM weight_records WHERE petId = :petId ORDER BY timestamp ASC")
+    fun getWeightRecordsForPet(petId: Int): Flow<List<WeightRecordEntity>>
 }
